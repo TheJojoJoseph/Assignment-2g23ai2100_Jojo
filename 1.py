@@ -1,89 +1,47 @@
 import os
-from typing import List, Set, Dict
 from itertools import combinations
 
 
-def read_files(directory: str) -> Dict[str, str]:
-    """Read all text files from the directory."""
+def g23ai2100_read_docs(dir_path):
     files = {}
-    for filename in ['D1.txt', 'D2.txt', 'D3.txt', 'D4.txt']:
-        path = os.path.join(directory, filename)
+    for name in ['D1.txt', 'D2.txt', 'D3.txt', 'D4.txt']:
         try:
-            with open(path, 'r') as f:
-                content = f.read().strip().lower()
-                # Ensure only lowercase letters and spaces
-                content = ''.join(
-                    c for c in content if c.islower() or c.isspace())
-                files[filename] = content
+            with open(os.path.join(dir_path, name), 'r') as f:
+                files[name] = ''.join(
+                    c for c in f.read().lower() if c.islower() or c.isspace()).strip()
         except FileNotFoundError:
-            print(f"Warning: {filename} not found")
+            print(f"Warning: {name} not found")
     return files
 
 
-def get_char_ngrams(text: str, n: int) -> Set[str]:
-    """Generate character n-grams from text."""
-    return set(text[i:i+n] for i in range(len(text) - n + 1))
+def g23ai2100_get_ngrams(text, n, by_word=False):
+    tokens = text.split() if by_word else text
+    return {''.join(tokens[i:i+n]) for i in range(len(tokens) - n + 1)}
 
 
-def get_word_ngrams(text: str, n: int) -> Set[str]:
-    """Generate word n-grams from text."""
-    words = text.split()
-    return set(' '.join(words[i:i+n]) for i in range(len(words) - n + 1))
+def g23ai2100_jaccard(set1, set2):
+    return len(set1 & set2) / len(set1 | set2) if set1 | set2 else 1.0
 
 
-def jaccard_similarity(set1: Set[str], set2: Set[str]) -> float:
-    """Calculate Jaccard similarity between two sets."""
-    if not set1 and not set2:
-        return 1.0
-    intersection = len(set1 & set2)
-    union = len(set1 | set2)
-    return intersection / union
+def g23ai2100_analyze(dir_path):
+    docs = g23ai2100_read_docs(dir_path)
+    ngram_types = {"Char-2": (2, False), "Char-3": (3,
+                                                    False), "Word-2": (2, True)}
+    ngrams = {t: {d: g23ai2100_get_ngrams(
+        text, *p) for d, text in docs.items()} for t, p in ngram_types.items()}
 
+    print("\nPart A: Distinct k-grams\n" + "=" * 40)
+    for d in docs:
+        print(f"\n{d}: " +
+              " ".join(f"{t}: {len(ngrams[t][d])}" for t in ngrams))
 
-def analyze_documents(directory: str):
-    """Analyze documents and print results."""
-    # Read files
-    documents = read_files(directory)
-
-    # Store k-grams for each document
-    char_2grams = {name: get_char_ngrams(text, 2)
-                   for name, text in documents.items()}
-    char_3grams = {name: get_char_ngrams(text, 3)
-                   for name, text in documents.items()}
-    word_2grams = {name: get_word_ngrams(text, 2)
-                   for name, text in documents.items()}
-
-    # Part A: Count distinct k-grams
-    print("\nPart A: Number of distinct k-grams")
-    print("=" * 50)
-    for doc_name in documents.keys():
-        print(f"\n{doc_name}:")
-        print(f"Character 2-grams: {len(char_2grams[doc_name])}")
-        print(f"Character 3-grams: {len(char_3grams[doc_name])}")
-        print(f"Word 2-grams: {len(word_2grams[doc_name])}")
-
-    # Part B: Calculate Jaccard similarities
-    print("\nPart B: Jaccard similarities")
-    print("=" * 50)
-
-    doc_pairs = list(combinations(documents.keys(), 2))
-
-    print("\nCharacter 2-grams similarities:")
-    for doc1, doc2 in doc_pairs:
-        sim = jaccard_similarity(char_2grams[doc1], char_2grams[doc2])
-        print(f"{doc1} - {doc2}: {sim:.4f}")
-
-    print("\nCharacter 3-grams similarities:")
-    for doc1, doc2 in doc_pairs:
-        sim = jaccard_similarity(char_3grams[doc1], char_3grams[doc2])
-        print(f"{doc1} - {doc2}: {sim:.4f}")
-
-    print("\nWord 2-grams similarities:")
-    for doc1, doc2 in doc_pairs:
-        sim = jaccard_similarity(word_2grams[doc1], word_2grams[doc2])
-        print(f"{doc1} - {doc2}: {sim:.4f}")
+    print("\nPart B: Jaccard Similarities\n" + "=" * 40)
+    for t in ngrams:
+        print(f"\n{t}:")
+        for d1, d2 in combinations(docs, 2):
+            print(
+                f"{d1}-{d2}: {g23ai2100_jaccard(ngrams[t][d1], ngrams[t][d2]):.4f}")
 
 
 if __name__ == "__main__":
-    directory_path = "minhash"
-    analyze_documents(directory_path)
+    g23ai2100_analyze("minhash")
